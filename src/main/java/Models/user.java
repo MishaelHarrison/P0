@@ -1,5 +1,7 @@
 package Models;
 
+import java.util.List;
+
 public class user {
     private int id;
     private String fname;
@@ -7,12 +9,15 @@ public class user {
     private String username;
     private String password;
     private boolean isEmployee;
+    private List<account> accounts;
+    private List<pendingTransaction> pendingTransactions;
 
-    public user(int id, String fname, String lname, String password) {
+    public user(int id, String fname, String lname, String username, String password) {
         this.id = id;
         this.fname = fname;
         this.lname = lname;
         this.password = password;
+        this.username = username;
     }
 
     public int getId() {
