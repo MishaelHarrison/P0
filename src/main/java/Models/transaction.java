@@ -1,14 +1,30 @@
 package Models;
 
-public class transaction {
-    private int transactionID;
-    private int accountID;
-    private double amount;
+import java.sql.Timestamp;
 
-    public transaction(int transactionID, int accountID, double amount) {
-        this.transactionID = transactionID;
-        this.accountID = accountID;
-        this.amount = amount;
+public class transaction implements Comparable {
+    private int transactionID;
+    private Integer receivingAccountID;
+    private Integer issuingAccountID;
+    private double amount;
+    private Timestamp timestamp;
+    private String receivingUsername;
+    private String issuingUsername;
+
+    public String getReceivingUsername() {
+        return receivingUsername;
+    }
+
+    public void setReceivingUsername(String receivingUsername) {
+        this.receivingUsername = receivingUsername;
+    }
+
+    public String getIssuingUsername() {
+        return issuingUsername;
+    }
+
+    public void setIssuingUsername(String issuingUsername) {
+        this.issuingUsername = issuingUsername;
     }
 
     public int getTransactionID() {
@@ -19,12 +35,20 @@ public class transaction {
         this.transactionID = transactionID;
     }
 
-    public int getAccountID() {
-        return accountID;
+    public Integer getReceivingAccountID() {
+        return receivingAccountID;
     }
 
-    public void setAccountID(int accountID) {
-        this.accountID = accountID;
+    public void setReceivingAccountID(Integer receivingAccountID) {
+        this.receivingAccountID = receivingAccountID;
+    }
+
+    public Integer getIssuingAccountID() {
+        return issuingAccountID;
+    }
+
+    public void setIssuingAccountID(Integer issuingAccountID) {
+        this.issuingAccountID = issuingAccountID;
     }
 
     public double getAmount() {
@@ -33,5 +57,18 @@ public class transaction {
 
     public void setAmount(double amount) {
         this.amount = amount;
+    }
+
+    public Timestamp getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        return timestamp.compareTo(((transaction)o).timestamp);
     }
 }

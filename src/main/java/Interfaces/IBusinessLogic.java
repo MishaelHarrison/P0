@@ -1,18 +1,33 @@
 package Interfaces;
 
 import Models.*;
+
+import java.util.ArrayList;
 import java.util.List;
 
 public interface IBusinessLogic {
-    user retrieveUser(String username, String password);
-    account addAccount(int userID, String accountType, double startingBalance);
-    double readBalance(int accountID);
-    Models.transaction exchange(int accountID, double amount);
-    List<user> viewCustomers();
-    List<account> viewCustomerAccounts(int userID);
+
+    boolean adminLogin(String admin, String adminPassword);
+
+    ArrayList<transaction> getTransactionLog(String admin, String adminPassword);
+
+    ArrayList<pendingTransaction> getPendingTransactions(int id);
+
+    void aproveTransaction(int id);
+
+    ArrayList<user> getAllUsers(String admin, String adminPassword);
+
+    ArrayList<account> getUserAccounts(String admin, String adminPassword, int userID);
+
+    ArrayList<transaction> getTransactionHistory(int accountID);
+
     void approveAccount(int accountID);
-    user addUser(user user);
-    pendingTransaction transfer(int issuingAccountID, int receivingAccountID, double amount);
-    transaction acceptTransfer(int pendingTransactionID);
-    List<transaction> viewTransactions();
+
+    void addAccount(user loggedUser, String name, double amount);
+
+    user login(String username, String password);
+
+    boolean isUsernameTaken(String username);
+
+    void addUser(user user);
 }
