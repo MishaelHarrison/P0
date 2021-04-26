@@ -8,6 +8,7 @@ import Interfaces.IUserFront;
 import Models.*;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
@@ -21,10 +22,10 @@ public class UserFront implements IUserFront {
     private final String doubleRegex = "^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$";
     private final String adminUsername = "admin";
     private final IBusinessLogic logic;
-    private final Scanner input;
+    private final InputStream stream;
 
     public UserFront(InputStream input, IBusinessLogic logic){
-        this.input = new Scanner(input);
+        this.stream = input;
         this.logic = logic;
     }
 
@@ -33,6 +34,7 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(ArrayList<String> validInput){
+        Scanner input = new Scanner(stream);
         boolean valid = false;
         String ret = null;
         while (!valid) {
@@ -46,6 +48,7 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(String regex){
+        Scanner input = new Scanner(stream);
         String ret;
         do {
             ret = input.nextLine();
@@ -56,6 +59,7 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(){
+        Scanner input = new Scanner(stream);
         String in;
         do {
             in = input.nextLine();
@@ -189,8 +193,8 @@ public class UserFront implements IUserFront {
                         break;
                 }
             } catch (InsufficientFunds | BadLogin | BusinessException e) {
-                log.error(e.getMessage());
-                if(e.getCause()!=null)log.error(e.getCause().getMessage());
+                log.warn(e.getMessage());
+                //if(e.getCause()!=null)log.error(e.getCause().getMessage());
             }
         }
     }
@@ -282,7 +286,11 @@ public class UserFront implements IUserFront {
         for (transaction k : transactions) {
             print(k.getTimestamp() + " $" + k.getAmount() + " issuer: " + k.getIssuingUsername() + " receiver: " + k.getReceivingUsername());
         }
-        input.nextLine();
+        try {
+            stream.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void viewIncomingTransactions() throws BadLogin, BusinessException, InsufficientFunds {
@@ -368,7 +376,11 @@ public class UserFront implements IUserFront {
                         (cash?received?" Deposit ":" Withdrawal ":received?" Received ":" Issued ")+
                         "Amount: $"+k.getAmount());
             }
-            input.nextLine();
+            try {
+                stream.read();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }else {
             logic.approveAccount(adminUsername, adminPassword, account.getAccountID());
         }
