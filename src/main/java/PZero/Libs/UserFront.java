@@ -62,14 +62,15 @@ public class UserFront implements IUserFront {
         //initialise variables
         String selection = "no selection";
         String[] menuItems = {
-                "A) Login",
-                "B) Create new user",
-                "C) Apply for a new account",
-                "D) View all accounts",
-                "E) View incoming transactions",
-                "F) Logout",
-                "G) View all users",
-                "H) View all completed transactions"
+                "A) Login",//0
+                "B) Create new user",//1
+                "C) Apply for a new account",//2
+                "D) View all accounts",//3
+                "E) View incoming transactions",//4
+                "F) Cash deposit/withdrawal",//5
+                "G) Logout",//6
+                "H) View all users",//7
+                "I) View all completed transactions"//8
         };
         boolean[] activeItems = new boolean[menuItems.length];
 
@@ -81,9 +82,9 @@ public class UserFront implements IUserFront {
             switch (userState) {
                 case "none": for (int i : new int[]{0,1}) activeItems[i] = true;
                     break;
-                case "customer": for (int i : new int[]{2,3,4,5}) activeItems[i] = true;
+                case "customer": for (int i : new int[]{2,3,4,5,6}) activeItems[i] = true;
                     break;
-                case "admin": for (int i : new int[]{5,6,7}) activeItems[i] = true;
+                case "admin": for (int i : new int[]{6,7,8}) activeItems[i] = true;
                     break;
             }
 
@@ -100,7 +101,8 @@ public class UserFront implements IUserFront {
             //communicate to user
             print("Clearing console");
             for (int i = 0; i < 20; i++) print("");
-            print("Hello Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
+            if (loggedUser == null)print("Hello Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
+            else print("Hello "+ loggedUser.getFname() +' '+ loggedUser.getLname() +" Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
             for (int i = 0; i < menuItems.length; i++) {
                 if (activeItems[i]){
                     print(menuItems[i]);
@@ -133,15 +135,20 @@ public class UserFront implements IUserFront {
                     viewIncomingTransactions();
                     break;
                 case "f": case "F":
+                    //cash transaction
+                    cashTransaction();
+                    break;
+                case "g": case "G":
                     //logout
                     userState = "none";
                     adminPassword = "";
+                    loggedUser = null;
                     break;
-                case "g": case "G":
+                case "h": case "H":
                     //view all users
                     viewAllUsers();
                     break;
-                case "h": case "H":
+                case "i": case "I":
                     //view all completed transactions
                     viewCompletedTransactions();
                     break;
@@ -160,11 +167,85 @@ public class UserFront implements IUserFront {
         }
     }
 
-    private void viewAllAccounts() {
+    private void cashTransaction() {
+        ArrayList<account> accounts = logic.getUserAccounts(loggedUser);
+        ArrayList<String> options = new ArrayList<String>();
 
+        for (account i: accounts) {
+            if(i.isApproved()) print(
+                    "ID: "+i.getAccountID()
+                            +" Account type: "+i.getAccountType()
+                            +" Balance: $"+i.getBalance());
+            options.add(i.getAccountID()+"");
+        }
+
+        print("\nEnter ID of an account to create cash transaction");
+        String selection = askInput(options);
+        int accountID;
+        if (!selection.equals("")){
+            accountID = Integer.parseInt(selection);
+        }else return;
+
+        print("\nA) Deposit\n)B Withdrawal");
+        String choice = askInput(new ArrayList<String>(Arrays.asList(new String[]{"a", "A", "b", "B"})));
+        double amount = 0d;
+        if (!choice.equals("")){
+            print("Enter amount");
+            amount = Double.parseDouble(askInput("^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$"));
+        }
+        if (choice.contains("aA")){
+            logic.cashDeposit(loggedUser, accountID, amount);
+        }else if (choice.contains("bB")){
+            logic.cashWithdrawal(loggedUser, accountID, amount);
+        }
+    }
+
+    private void viewAllAccounts() {
+        ArrayList<account> accounts = logic.getUserAccounts(loggedUser);
+        ArrayList<String> options = new ArrayList<String>();
+
+        for (account i: accounts) {
+            if(i.isApproved()) print(
+                    "ID: "+i.getAccountID()
+                    +" Account type: "+i.getAccountType()
+                    +" Balance: $"+i.getBalance());
+            options.add(i.getAccountID()+"");
+        }
+
+        print("\nEnter ID of an account to create a transaction");
+        String selection = askInput(options);
+        if (!selection.equals("")){
+            int id = Integer.parseInt(selection);
+            account account = null;
+            for (account i : accounts) {
+                if (i.getAccountID() == id){
+                    account = i;
+                    break;
+                }
+            }
+            createTransaction(account);
+        }
+    }
+
+    private void createTransaction(account account) {
+        print("Enter transaction amount");
+        double amount = Double.parseDouble(askInput("^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$"));
+        print("Enter receiving account id:");
+        int id = 0;
+        boolean valid = false;
+        while (!valid){
+            id = Integer.parseInt(askInput("[1-9][0-9]*"));
+            valid = true;
+            if (!logic.accountIdExists(id)){
+                valid = false;
+                print("Account id does not exist");
+            }
+        }
+        logic.createTransaction(loggedUser, account, amount, id);
     }
 
     private boolean adminLogin() {
+        adminPassword = askInput();
         return logic.adminLogin("admin", adminPassword);
     }
 
@@ -178,7 +259,7 @@ public class UserFront implements IUserFront {
     }
 
     private void viewIncomingTransactions() {
-        ArrayList<pendingTransaction> transactions = logic.getPendingTransactions(loggedUser.getId());
+        ArrayList<pendingTransaction> transactions = logic.getPendingTransactions(loggedUser);
         ArrayList<String> options = new ArrayList<String>();
         for (pendingTransaction i: transactions) {
             options.add(i.getPendingTransactionID()+"");
@@ -189,7 +270,7 @@ public class UserFront implements IUserFront {
         String choice = askInput(options);
         if (!choice.equals("")){
             int id = Integer.parseInt(choice);
-            logic.aproveTransaction(id);
+            logic.approveTransaction(id);
         }
     }
 
@@ -248,7 +329,7 @@ public class UserFront implements IUserFront {
 
     private void actOnAccount(account account) {
         if(account.isApproved()){
-            ArrayList<transaction> transactions = logic.getTransactionHistory(account.getAccountID());
+            ArrayList<transaction> transactions = logic.getTransactionHistory("admin", adminPassword, account.getAccountID());
             Collections.sort(transactions);
             for (int i = 0; i < transactions.size(); i++) {
                 transaction k = transactions.get(i);
@@ -259,7 +340,7 @@ public class UserFront implements IUserFront {
                         "Amount: $"+k.getAmount());
             }
         }else {
-            logic.approveAccount(account.getAccountID());
+            logic.approveAccount("admin", adminPassword, account.getAccountID());
         }
     }
 
@@ -282,10 +363,9 @@ public class UserFront implements IUserFront {
 
     private void newUser(){
         String username;
-        print("enter username:");
         boolean first = true;
         do {
-            if (first) print("username taken");
+            if (!first) print("username taken");
             else first = false;
             print("enter username:");
             username = askInput();

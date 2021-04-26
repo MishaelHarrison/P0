@@ -1,12 +1,36 @@
 package Interfaces;
 
-import java.sql.ResultSet;
+import Models.user;
+import PZero.Libs.DAO.Entities.accountEntity;
+import PZero.Libs.DAO.Entities.transactionEntity;
+import PZero.Libs.DAO.Entities.userEntity;
+
+import java.util.ArrayList;
 
 public interface IBankData {
-    int create(String table, String columns, String values);
+    void createTransaction(Integer issuingID, Integer receivingID, double amount, boolean preApproved);
 
-    String read(String select, String table, String modifiers);
-    String read(String select, String table);
+    accountEntity getAccount(int accountID);
 
-    void update(String table, String columns, String values, String where);
+    ArrayList<accountEntity> getAccountsFromUser(int id);
+
+    void addUser(userEntity userEntity);
+
+    boolean doesUsernameExist(String username);
+
+    userEntity login(String username, String password);
+
+    void addAccount(int userID, String name, double amount);
+
+    void approveAccount(int accountID);
+
+    ArrayList<transactionEntity> getTransactionsFromAccount(int accountID);
+
+    ArrayList<userEntity> getAllUsers();
+
+    void approveTransaction(int id);
+
+    ArrayList<transactionEntity> transactionsFromUser(int id, boolean isApproved);
+
+    ArrayList<transactionEntity> fullTransactionLog();
 }

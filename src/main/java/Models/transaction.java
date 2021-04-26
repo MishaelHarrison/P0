@@ -11,6 +11,16 @@ public class transaction implements Comparable {
     private String receivingUsername;
     private String issuingUsername;
 
+    public transaction(int transactionID, Integer receivingAccountID, Integer issuingAccountID, double amount, Timestamp timestamp, String receivingUsername, String issuingUsername) {
+        this.transactionID = transactionID;
+        this.receivingAccountID = receivingAccountID;
+        this.issuingAccountID = issuingAccountID;
+        this.amount = amount;
+        this.timestamp = timestamp;
+        this.receivingUsername = receivingUsername;
+        this.issuingUsername = issuingUsername;
+    }
+
     public String getReceivingUsername() {
         return receivingUsername;
     }
