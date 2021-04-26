@@ -1,5 +1,7 @@
 package PZero.Libs.DAO;
 
+import Exceptions.BusinessException;
+import Exceptions.InsufficientFunds;
 import Interfaces.IBankData;
 import PZero.Libs.DAO.Entities.accountEntity;
 import PZero.Libs.DAO.Entities.transactionEntity;
@@ -87,7 +89,7 @@ public class BankData implements IBankData {
     }
 
     @Override
-    public void createTransaction(Integer issuingID, Integer receivingID, double amount, boolean preApproved) {
+    public void createTransaction(Integer issuingID, Integer receivingID, double amount, boolean preApproved) throws BusinessException, InsufficientFunds {
         Connection connection = postgresConnector.getConnection();
         String sql="INSERT INTO "+schema+".transactions\n" +
                 "(issuingid, recievingid, amount, approved)" +
@@ -100,15 +102,16 @@ public class BankData implements IBankData {
             preparedStatement.setBoolean(4, preApproved);
             preparedStatement.executeUpdate();
 
-            key = preparedStatement.getGeneratedKeys().getInt(1);
+            ResultSet rs = preparedStatement.getGeneratedKeys();
+            if (rs.next()) key = rs.getInt(1);
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         if (preApproved) approveTransaction(key);
     }
 
     @Override
-    public accountEntity getAccount(int accountID) {
+    public accountEntity getAccount(int accountID) throws BusinessException {
         ArrayList<accountEntity> ret = new ArrayList<>();
         Connection connection = postgresConnector.getConnection();
         String sql="select a.id, a.balance, a.accountType, a.approved, b.id as userid, b.fname, b.lname, b.username from " +
@@ -135,7 +138,7 @@ public class BankData implements IBankData {
                 ret.add(i);
             }
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         try{
             return ret.get(0);
@@ -145,7 +148,7 @@ public class BankData implements IBankData {
     }
 
     @Override
-    public ArrayList<accountEntity> getAccountsFromUser(int id) {
+    public ArrayList<accountEntity> getAccountsFromUser(int id) throws BusinessException {
         ArrayList<accountEntity> ret = new ArrayList<>();
         Connection connection = postgresConnector.getConnection();
         String sql="select a.id, a.balance, a.accountType, a.approved, b.id as userid, b.fname, b.lname, b.username from " +
@@ -172,13 +175,13 @@ public class BankData implements IBankData {
                 ret.add(i);
             }
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         return ret;
     }
 
     @Override
-    public void addUser(userEntity userEntity) {
+    public void addUser(userEntity userEntity) throws BusinessException {
         Connection connection = postgresConnector.getConnection();
         String sql="INSERT INTO "+schema+".users\n" +
                 "(username, password, fname, lname)\n" +
@@ -190,12 +193,12 @@ public class BankData implements IBankData {
             preparedStatement.setString(4, userEntity.getLname());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
     }
 
     @Override
-    public boolean doesUsernameExist(String username) {
+    public boolean doesUsernameExist(String username) throws BusinessException {
         ArrayList<userEntity> ret = new ArrayList<>();
         Connection connection = postgresConnector.getConnection();
         String sql="SELECT id, username, \"password\", fname, lname\n" +
@@ -214,18 +217,13 @@ public class BankData implements IBankData {
                 ));
             }
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
-        try{
-            ret.get(0);
-            return true;
-        }catch (IndexOutOfBoundsException e){
-            return false;
-        }
+        return ret.size() > 0;
     }
 
     @Override
-    public userEntity login(String username, String password) {
+    public userEntity login(String username, String password) throws BusinessException {
         ArrayList<userEntity> ret = new ArrayList<>();
         Connection connection = postgresConnector.getConnection();
         String sql="SELECT id, username, \"password\", fname, lname\n" +
@@ -245,7 +243,7 @@ public class BankData implements IBankData {
                 ));
             }
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         try{
             return ret.get(0);
@@ -255,7 +253,7 @@ public class BankData implements IBankData {
     }
 
     @Override
-    public void addAccount(int userID, String name, double amount) {
+    public void addAccount(int userID, String name, double amount) throws BusinessException {
         Connection connection = postgresConnector.getConnection();
         String sql="INSERT INTO "+schema+".accounts\n" +
                 "(userID, accountType, balance)\n" +
@@ -266,25 +264,25 @@ public class BankData implements IBankData {
             preparedStatement.setDouble(3, amount);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
     }
 
     @Override
-    public void approveAccount(int accountID) {
+    public void approveAccount(int accountID) throws BusinessException {
         Connection connection = postgresConnector.getConnection();
         String sql="update "+schema+".accounts set approved = true where id = ?;";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
             preparedStatement.setInt(1,accountID);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
     }
 
     @Override
-    public ArrayList<transactionEntity> getTransactionsFromAccount(int accountID) {
-        ArrayList<transactionEntity> ret = new ArrayList<>();
+    public ArrayList<transactionEntity> getTransactionsFromAccount(int accountID) throws BusinessException {
+        ArrayList<transactionEntity> ret;
         Connection connection = postgresConnector.getConnection();
         String sql=transactionQuery() + "where recievingid = ? or issuingid = ?;";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
@@ -294,13 +292,13 @@ public class BankData implements IBankData {
 
             ret = transactionsFromRS(rs);
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         return ret;
     }
 
     @Override
-    public ArrayList<userEntity> getAllUsers() {
+    public ArrayList<userEntity> getAllUsers() throws BusinessException {
         ArrayList<userEntity> ret = new ArrayList<>();
         Connection connection = postgresConnector.getConnection();
         String sql="SELECT id, username, \"password\", fname, lname\n" +
@@ -318,40 +316,75 @@ public class BankData implements IBankData {
                 ));
             }
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         return ret;
     }
 
     @Override
-    public void approveTransaction(int id) {
+    public void approveTransaction(int id) throws BusinessException, InsufficientFunds {
         Connection connection = postgresConnector.getConnection();
-        Transact(id);
+        transact(id);
         String sql="update "+schema+".transactions set approved = true where id = ?;";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
             preparedStatement.setInt(1,id);
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
     }
 
-    private void Transact(int id) {
+    private void transact(int id) throws BusinessException, InsufficientFunds {
         Connection connection = postgresConnector.getConnection();
         String sql= transactionQuery()+"where m.id = ?;";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
             preparedStatement.setInt(1, id);
             ResultSet rs = preparedStatement.executeQuery();
-            subtractFunds(rs.getInt(""), rs.getDouble());
-            addFunds();
+            if (rs.next()) {
+                double amount = rs.getDouble("amount");
+                int issuingID = rs.getInt("issuingid");
+                int receivingID = rs.getInt("recievingid");
+                if (issuingID != 0) subtractFunds(issuingID, amount);
+                if (receivingID != 0) addFunds(receivingID, amount);
+            }else {
+                throw new BusinessException("error within BankData.Transact, no transaction found");
+            }
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
+        }
+    }
+
+    private void subtractFunds(int issuingID, double amount) throws BusinessException, InsufficientFunds {
+        if (getAccount(issuingID).getBalance() >= amount){
+            Connection connection = postgresConnector.getConnection();
+            String sql="update "+schema+".accounts set balance = balance - ? where id = ?;";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
+                preparedStatement.setDouble(1,amount);
+                preparedStatement.setInt(2, issuingID);
+                preparedStatement.executeUpdate();
+            } catch (SQLException e) {
+                throw new BusinessException(e);
+            }
+        }else {
+            throw new InsufficientFunds();
+        }
+    }
+
+    private void addFunds(int recievingID, double amount) throws BusinessException {
+        Connection connection = postgresConnector.getConnection();
+        String sql="update "+schema+".accounts set balance = balance + ? where id = ?;";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
+            preparedStatement.setDouble(1,amount);
+            preparedStatement.setInt(2,recievingID);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new BusinessException(e);
         }
     }
 
     @Override
-    public ArrayList<transactionEntity> transactionsFromUser(int id, boolean isApproved) {
-        ArrayList<transactionEntity> ret = new ArrayList<>();
+    public ArrayList<transactionEntity> transactionsFromUser(int id, boolean isApproved) throws BusinessException {
+        ArrayList<transactionEntity> ret;
         Connection connection = postgresConnector.getConnection();
         String sql=transactionQuery() + "where (m.userid = ? or r.userid = ?) and approved = ?;";
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
@@ -362,14 +395,14 @@ public class BankData implements IBankData {
 
             ret = transactionsFromRS(rs);
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         return ret;
     }
 
     @Override
-    public ArrayList<transactionEntity> fullTransactionLog() {
-        ArrayList<transactionEntity> ret = new ArrayList<>();
+    public ArrayList<transactionEntity> fullTransactionLog() throws BusinessException {
+        ArrayList<transactionEntity> ret;
         Connection connection = postgresConnector.getConnection();
         String sql= transactionQuery()+';';
         try (PreparedStatement preparedStatement = connection.prepareStatement(sql)){
@@ -377,7 +410,7 @@ public class BankData implements IBankData {
 
             ret = transactionsFromRS(rs);
         } catch (SQLException e) {
-            e.printStackTrace(System.out);//todo business exception
+            throw new BusinessException(e);
         }
         return ret;
     }

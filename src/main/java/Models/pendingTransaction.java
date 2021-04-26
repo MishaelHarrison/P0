@@ -5,12 +5,22 @@ public class pendingTransaction {
     private String issuingFname;
     private String issuingLname;
     private double amount;
+    private String acceptingAccountName;
 
-    public pendingTransaction(int pendingTransactionID, String issuingFname, String issuingLname, double amount) {
+    public pendingTransaction(int pendingTransactionID, String issuingFname, String issuingLname, double amount, String acceptingAccountName) {
         this.pendingTransactionID = pendingTransactionID;
         this.issuingFname = issuingFname;
         this.issuingLname = issuingLname;
         this.amount = amount;
+        this.acceptingAccountName = acceptingAccountName;
+    }
+
+    public String getAcceptingAccountName() {
+        return acceptingAccountName;
+    }
+
+    public void setAcceptingAccountName(String acceptingAccountName) {
+        this.acceptingAccountName = acceptingAccountName;
     }
 
     public int getPendingTransactionID() {

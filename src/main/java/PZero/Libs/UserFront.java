@@ -1,19 +1,27 @@
 package PZero.Libs;
 
+import Exceptions.BadLogin;
+import Exceptions.BusinessException;
+import Exceptions.InsufficientFunds;
 import Interfaces.IBusinessLogic;
 import Interfaces.IUserFront;
 import Models.*;
+import org.apache.log4j.Logger;
 
 import java.io.InputStream;
 import java.util.*;
 
 public class UserFront implements IUserFront {
 
+    private static final Logger log=Logger.getLogger(UserFront.class);
+
     private user loggedUser;
     private String userState = "none";
     private String adminPassword = "";
-    private IBusinessLogic logic;
-    private Scanner input;
+    private final String doubleRegex = "^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$";
+    private final String adminUsername = "admin";
+    private final IBusinessLogic logic;
+    private final Scanner input;
 
     public UserFront(InputStream input, IBusinessLogic logic){
         this.input = new Scanner(input);
@@ -21,7 +29,7 @@ public class UserFront implements IUserFront {
     }
 
     private void print(String out){
-        System.out.println(out);
+        log.info(out);
     }
 
     private String askInput(ArrayList<String> validInput){
@@ -48,7 +56,7 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(){
-        String in = "";
+        String in;
         do {
             in = input.nextLine();
             if (in.equals(""))print("Input expected");
@@ -75,101 +83,121 @@ public class UserFront implements IUserFront {
         boolean[] activeItems = new boolean[menuItems.length];
 
         while (!selection.equals("")){
-            //reset active items
-            Arrays.fill(activeItems, false);
+            try {
 
-            //set active items based on user state
-            switch (userState) {
-                case "none": for (int i : new int[]{0,1}) activeItems[i] = true;
-                    break;
-                case "customer": for (int i : new int[]{2,3,4,5,6}) activeItems[i] = true;
-                    break;
-                case "admin": for (int i : new int[]{6,7,8}) activeItems[i] = true;
-                    break;
-            }
+                //reset active items
+                Arrays.fill(activeItems, false);
 
-            //collect options
-            ArrayList<String> options = new ArrayList<String>();
-            options.add("admin");//admin option (intentionally hidden)
-            for (int i = 0; i < activeItems.length; i++) {
-                if (activeItems[i]){
-                    options.add(String.valueOf((char) (i+(int)'a')));
-                    options.add(String.valueOf((char) (i+(int)'A')));
+                //set active items based on user state
+                switch (userState) {
+                    case "none":
+                        for (int i : new int[]{0, 1}) activeItems[i] = true;
+                        break;
+                    case "customer":
+                        for (int i : new int[]{2, 3, 4, 5, 6}) activeItems[i] = true;
+                        break;
+                    case adminUsername:
+                        for (int i : new int[]{6, 7, 8}) activeItems[i] = true;
+                        break;
                 }
-            }
 
-            //communicate to user
-            print("Clearing console");
-            for (int i = 0; i < 20; i++) print("");
-            if (loggedUser == null)print("Hello Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
-            else print("Hello "+ loggedUser.getFname() +' '+ loggedUser.getLname() +" Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
-            for (int i = 0; i < menuItems.length; i++) {
-                if (activeItems[i]){
-                    print(menuItems[i]);
+                //collect options
+                ArrayList<String> options = new ArrayList<>();
+                options.add(adminUsername);//admin option (intentionally hidden)
+                for (int i = 0; i < activeItems.length; i++) {
+                    if (activeItems[i]) {
+                        options.add(String.valueOf((char) (i + (int) 'a')));
+                        options.add(String.valueOf((char) (i + (int) 'A')));
+                    }
                 }
-            }
 
-            //take input
-            selection = askInput(options);
+                //communicate to user
+                print("Clearing console");
+                for (int i = 0; i < 20; i++) print("");
+                if (loggedUser == null)
+                    print("Hello Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
+                else
+                    print("Hello " + loggedUser.getFname() + ' ' + loggedUser.getLname() + " Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
+                for (int i = 0; i < menuItems.length; i++) {
+                    if (activeItems[i]) {
+                        print(menuItems[i]);
+                    }
+                }
 
-            //mega switch statement
-            switch (selection){
-                case "a": case "A":
-                    //login
-                    userState = login() ? "customer" : userState ;
-                    break;
-                case "b": case "B":
-                    //new user
-                    newUser();
-                    break;
-                case "c": case "C":
-                    //new account
-                    newAccount();
-                    break;
-                case "d": case "D":
-                    //view all accounts
-                    viewAllAccounts();
-                    break;
-                case "e": case "E":
-                    //view incoming transactions
-                    viewIncomingTransactions();
-                    break;
-                case "f": case "F":
-                    //cash transaction
-                    cashTransaction();
-                    break;
-                case "g": case "G":
-                    //logout
-                    userState = "none";
-                    adminPassword = "";
-                    loggedUser = null;
-                    break;
-                case "h": case "H":
-                    //view all users
-                    viewAllUsers();
-                    break;
-                case "i": case "I":
-                    //view all completed transactions
-                    viewCompletedTransactions();
-                    break;
-                case "admin":
-                    //admin login
-                    userState = adminLogin() ? "admin" : "none" ;
-                    break;
-                case "":
-                    //quit
-                    break;
-                default:
-                    //if i do a whoops
-                    print("coder did a whoops");
-                    break;
+                //take input
+                selection = askInput(options);
+
+                //mega switch statement
+                switch (selection) {
+                    case "a":
+                    case "A":
+                        //login
+                        userState = login() ? "customer" : userState;
+                        break;
+                    case "b":
+                    case "B":
+                        //new user
+                        newUser();
+                        break;
+                    case "c":
+                    case "C":
+                        //new account
+                        newAccount();
+                        break;
+                    case "d":
+                    case "D":
+                        //view all accounts
+                        viewAllAccounts();
+                        break;
+                    case "e":
+                    case "E":
+                        //view incoming transactions
+                        viewIncomingTransactions();
+                        break;
+                    case "f":
+                    case "F":
+                        //cash transaction
+                        cashTransaction();
+                        break;
+                    case "g":
+                    case "G":
+                        //logout
+                        userState = "none";
+                        adminPassword = "";
+                        loggedUser = null;
+                        break;
+                    case "h":
+                    case "H":
+                        //view all users
+                        viewAllUsers();
+                        break;
+                    case "i":
+                    case "I":
+                        //view all completed transactions
+                        viewCompletedTransactions();
+                        break;
+                    case adminUsername:
+                        //admin login
+                        userState = adminLogin() ? adminUsername : "none";
+                        break;
+                    case "":
+                        //quit
+                        break;
+                    default:
+                        //if i do a whoops
+                        print("coder did a whoops");
+                        break;
+                }
+            } catch (InsufficientFunds | BadLogin | BusinessException e) {
+                log.error(e.getMessage());
+                if(e.getCause()!=null)log.error(e.getCause().getMessage());
             }
         }
     }
 
-    private void cashTransaction() {
+    private void cashTransaction() throws BadLogin, BusinessException, InsufficientFunds {
         ArrayList<account> accounts = logic.getUserAccounts(loggedUser);
-        ArrayList<String> options = new ArrayList<String>();
+        ArrayList<String> options = new ArrayList<>();
 
         for (account i: accounts) {
             if(i.isApproved()) print(
@@ -186,23 +214,23 @@ public class UserFront implements IUserFront {
             accountID = Integer.parseInt(selection);
         }else return;
 
-        print("\nA) Deposit\n)B Withdrawal");
-        String choice = askInput(new ArrayList<String>(Arrays.asList(new String[]{"a", "A", "b", "B"})));
+        print("\nA) Deposit\nB) Withdrawal");
+        String choice = askInput(new ArrayList<>(Arrays.asList("a", "A", "b", "B")));
         double amount = 0d;
         if (!choice.equals("")){
             print("Enter amount");
-            amount = Double.parseDouble(askInput("^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$"));
+            amount = Double.parseDouble(askInput(doubleRegex));
         }
-        if (choice.contains("aA")){
+        if (choice.contains("a") || choice.contains("A")){
             logic.cashDeposit(loggedUser, accountID, amount);
-        }else if (choice.contains("bB")){
+        }else if (choice.contains("b") || choice.contains("B")){
             logic.cashWithdrawal(loggedUser, accountID, amount);
         }
     }
 
-    private void viewAllAccounts() {
+    private void viewAllAccounts() throws BadLogin, BusinessException, InsufficientFunds {
         ArrayList<account> accounts = logic.getUserAccounts(loggedUser);
-        ArrayList<String> options = new ArrayList<String>();
+        ArrayList<String> options = new ArrayList<>();
 
         for (account i: accounts) {
             if(i.isApproved()) print(
@@ -227,9 +255,9 @@ public class UserFront implements IUserFront {
         }
     }
 
-    private void createTransaction(account account) {
+    private void createTransaction(account account) throws BusinessException, BadLogin, InsufficientFunds {
         print("Enter transaction amount");
-        double amount = Double.parseDouble(askInput("^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$"));
+        double amount = Double.parseDouble(askInput(doubleRegex));
         print("Enter receiving account id:");
         int id = 0;
         boolean valid = false;
@@ -246,24 +274,24 @@ public class UserFront implements IUserFront {
 
     private boolean adminLogin() {
         adminPassword = askInput();
-        return logic.adminLogin("admin", adminPassword);
+        return logic.adminLogin(adminUsername, adminPassword);
     }
 
-    private void viewCompletedTransactions() {
-        ArrayList<transaction> transactions = logic.getTransactionLog("admin", adminPassword);
-        for (int i = 0; i < transactions.size(); i++) {
-            transaction k = transactions.get(i);
-            print(k.getTimestamp()+" $"+k.getAmount()+" issuer: "+k.getIssuingUsername()+" receiver: "+k.getReceivingUsername());
+    private void viewCompletedTransactions() throws BadLogin, BusinessException {
+        ArrayList<transaction> transactions = logic.getTransactionLog(adminUsername, adminPassword);
+        for (transaction k : transactions) {
+            print(k.getTimestamp() + " $" + k.getAmount() + " issuer: " + k.getIssuingUsername() + " receiver: " + k.getReceivingUsername());
         }
         input.nextLine();
     }
 
-    private void viewIncomingTransactions() {
+    private void viewIncomingTransactions() throws BadLogin, BusinessException, InsufficientFunds {
         ArrayList<pendingTransaction> transactions = logic.getPendingTransactions(loggedUser);
-        ArrayList<String> options = new ArrayList<String>();
+        ArrayList<String> options = new ArrayList<>();
         for (pendingTransaction i: transactions) {
             options.add(i.getPendingTransactionID()+"");
-            print("ID: "+i.getPendingTransactionID()+" Amount: "+i.getAmount()+
+            print("\nID: "+i.getPendingTransactionID()+" Amount: $"+i.getAmount()+
+                    "\nAccepting account: "+i.getAcceptingAccountName()+
                     "\nIssuer's name: "+i.getIssuingFname()+" "+i.getIssuingLname());
         }
         print("\nEnter a transaction ID to approve:");
@@ -274,9 +302,9 @@ public class UserFront implements IUserFront {
         }
     }
 
-    private void viewAllUsers() {
-        ArrayList<user> users = logic.getAllUsers("admin", adminPassword);
-        ArrayList<String> options = new ArrayList<String>();
+    private void viewAllUsers() throws BadLogin, BusinessException {
+        ArrayList<user> users = logic.getAllUsers(adminUsername, adminPassword);
+        ArrayList<String> options = new ArrayList<>();
 
         for (user i : users) {
             options.add(i.getId()+"");
@@ -291,9 +319,9 @@ public class UserFront implements IUserFront {
         }
     }
 
-    private void viewUserAccounts(int userID) {
-        ArrayList<account> accounts = logic.getUserAccounts("admin", adminPassword, userID);
-        ArrayList<String> options = new ArrayList<String>();
+    private void viewUserAccounts(int userID) throws BadLogin, BusinessException {
+        ArrayList<account> accounts = logic.getUserAccounts(adminUsername, adminPassword, userID);
+        ArrayList<String> options = new ArrayList<>();
 
         for (account i: accounts) {
             if(i.isApproved()) print(
@@ -323,13 +351,14 @@ public class UserFront implements IUserFront {
                     break;
                 }
             }
+            assert account != null;
             actOnAccount(account);
         }
     }
 
-    private void actOnAccount(account account) {
+    private void actOnAccount(account account) throws BadLogin, BusinessException {
         if(account.isApproved()){
-            ArrayList<transaction> transactions = logic.getTransactionHistory("admin", adminPassword, account.getAccountID());
+            ArrayList<transaction> transactions = logic.getTransactionHistory(adminUsername, adminPassword, account.getAccountID());
             Collections.sort(transactions);
             for (int i = 0; i < transactions.size(); i++) {
                 transaction k = transactions.get(i);
@@ -339,12 +368,13 @@ public class UserFront implements IUserFront {
                         (cash?received?" Deposit ":" Withdrawal ":received?" Received ":" Issued ")+
                         "Amount: $"+k.getAmount());
             }
+            input.nextLine();
         }else {
-            logic.approveAccount("admin", adminPassword, account.getAccountID());
+            logic.approveAccount(adminUsername, adminPassword, account.getAccountID());
         }
     }
 
-    private void newAccount() {
+    private void newAccount() throws BadLogin, BusinessException {
         print("enter account name:");
         String name = askInput();
         print("enter starting amount:");
@@ -352,7 +382,7 @@ public class UserFront implements IUserFront {
         logic.addAccount(loggedUser, name, amount);
     }
 
-    private boolean login() {
+    private boolean login() throws BusinessException {
         print("enter username:");
         String username = askInput();
         print("enter password:");
@@ -361,7 +391,7 @@ public class UserFront implements IUserFront {
         return loggedUser != null;
     }
 
-    private void newUser(){
+    private void newUser() throws BusinessException {
         String username;
         boolean first = true;
         do {
