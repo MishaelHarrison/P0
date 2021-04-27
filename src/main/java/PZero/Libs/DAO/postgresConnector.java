@@ -8,20 +8,20 @@ public class postgresConnector {
 
     private postgresConnector(){}
     private static Connection connection;
+    private static boolean set = false;
 
-    static {
+    public static void beginConnection(String url, String username, String password){
         try {
             Class.forName("org.postgresql.Driver");
-            String url="jdbc:postgresql://localhost:5432/postgres";
-            String username="postgres";
-            String password="toast";
             connection= DriverManager.getConnection(url,username,password);
+            set = true;
         } catch (ClassNotFoundException | SQLException e) {
             System.out.println(e);
         }
     }
+
     public static Connection getConnection(){
-        return connection;
+        return set ? connection : null;
     }
 
 }

@@ -22,10 +22,10 @@ public class UserFront implements IUserFront {
     private final String doubleRegex = "^(?:0|[1-9]\\d{0,2}(?:,?\\d{3})*)(?:\\.\\d+)?$";
     private final String adminUsername = "admin";
     private final IBusinessLogic logic;
-    private final InputStream stream;
+    private final Scanner input;
 
     public UserFront(InputStream input, IBusinessLogic logic){
-        this.stream = input;
+        this.input = new Scanner(input);
         this.logic = logic;
     }
 
@@ -34,7 +34,6 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(ArrayList<String> validInput){
-        Scanner input = new Scanner(stream);
         boolean valid = false;
         String ret = null;
         while (!valid) {
@@ -48,7 +47,6 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(String regex){
-        Scanner input = new Scanner(stream);
         String ret;
         do {
             ret = input.nextLine();
@@ -59,7 +57,6 @@ public class UserFront implements IUserFront {
     }
 
     private String askInput(){
-        Scanner input = new Scanner(stream);
         String in;
         do {
             in = input.nextLine();
@@ -116,8 +113,6 @@ public class UserFront implements IUserFront {
                 }
 
                 //communicate to user
-                print("Clearing console");
-                for (int i = 0; i < 20; i++) print("");
                 if (loggedUser == null)
                     print("Hello Welcome to JPMishael. \nEnter a selection or send nothing to exit any menu\n");
                 else
@@ -193,7 +188,7 @@ public class UserFront implements IUserFront {
                         break;
                 }
             } catch (InsufficientFunds | BadLogin | BusinessException e) {
-                log.warn(e.getMessage());
+                print(e.getMessage());
                 //if(e.getCause()!=null)log.error(e.getCause().getMessage());
             }
         }
@@ -286,11 +281,7 @@ public class UserFront implements IUserFront {
         for (transaction k : transactions) {
             print(k.getTimestamp() + " $" + k.getAmount() + " issuer: " + k.getIssuingUsername() + " receiver: " + k.getReceivingUsername());
         }
-        try {
-            stream.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        input.nextLine();
     }
 
     private void viewIncomingTransactions() throws BadLogin, BusinessException, InsufficientFunds {
@@ -376,11 +367,7 @@ public class UserFront implements IUserFront {
                         (cash?received?" Deposit ":" Withdrawal ":received?" Received ":" Issued ")+
                         "Amount: $"+k.getAmount());
             }
-            try {
-                stream.read();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            input.nextLine();
         }else {
             logic.approveAccount(adminUsername, adminPassword, account.getAccountID());
         }
