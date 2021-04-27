@@ -85,7 +85,6 @@ public class UserFront implements IUserFront {
 
         while (!selection.equals("")){
             try {
-
                 //reset active items
                 Arrays.fill(activeItems, false);
 
@@ -187,9 +186,12 @@ public class UserFront implements IUserFront {
                         print("coder did a whoops");
                         break;
                 }
-            } catch (InsufficientFunds | BadLogin | BusinessException e) {
-                print(e.getMessage());
-                //if(e.getCause()!=null)log.error(e.getCause().getMessage());
+            } catch (InsufficientFunds e) {
+                log.warn("Insufficient funds for transaction");
+            } catch (BadLogin e) {
+                log.error("Error: incorrect login credentials for attempted action");
+            } catch (BusinessException e) {
+                log.error("Error: database error, contact sysadmin");
             }
         }
     }
