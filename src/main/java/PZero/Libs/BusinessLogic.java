@@ -47,9 +47,11 @@ public class BusinessLogic implements IBusinessLogic {
         if (login(user.getUsername(), user.getPassword()) != null){
             ArrayList<transactionEntity> query = data.transactionsFromUser(user.getId(), false);
             for (transactionEntity i : query) {
-                ret.add(new pendingTransaction(
-                        i.getID(), i.getIssuingAccount().getUser().getFname(),i.getIssuingAccount().getUser().getLname(),i.getAmount(),i.getReceivingAccount().getName()
-                ));
+                if (i.getIssuingAccount() != null && i.getReceivingAccount() != null) {
+                    ret.add(new pendingTransaction(
+                            i.getID(), i.getIssuingAccount().getUser().getFname(),i.getIssuingAccount().getUser().getLname(),i.getAmount(),i.getReceivingAccount().getName()
+                    ));
+                }
             }
         }else {
             throw new BadLogin();
